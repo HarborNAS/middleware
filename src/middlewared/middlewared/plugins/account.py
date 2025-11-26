@@ -85,6 +85,7 @@ from middlewared.plugins.idmap_ import idmap_winbind
 from middlewared.plugins.idmap_ import idmap_sss
 from threading import Lock
 from truenas_pypam import PAMCode
+from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 
 
 SYNC_NEXT_UID_LOCK = Lock()
@@ -1310,7 +1311,7 @@ class UserService(CRUDService):
         if await self.middleware.call('user.has_local_administrator_set_up'):
             raise CallError('Local administrator is already set up', errno.EEXIST)
 
-        if username == 'truenas_admin':
+        if username == TRUENAS_ADMIN_USERNAME:
             # first check based on NSS to catch collisions with AD / LDAP users
             try:
                 pwd_obj = await self.middleware.call('user.get_user_obj', {'uid': ADMIN_UID})

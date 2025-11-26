@@ -18,11 +18,12 @@ from middlewared.service import CallError, Service, job, private
 from middlewared.utils.db import FREENAS_DATABASE
 from middlewared.utils.privilege import credential_has_full_admin
 from middlewared.utils.pwenc import pwenc_generate_secret, pwenc_rename, PWENC_FILE_SECRET, PWENC_FILE_SECRET_MODE
+from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 
 CONFIG_FILES = {
     'pwenc_secret': PWENC_FILE_SECRET,
     'admin_authorized_keys': '/home/admin/.ssh/authorized_keys',
-    'truenas_admin_authorized_keys': '/home/truenas_admin/.ssh/authorized_keys',
+    'truenas_admin_authorized_keys': f'/home/{TRUENAS_ADMIN_USERNAME}/.ssh/authorized_keys',
     'root_authorized_keys': '/root/.ssh/authorized_keys',
 }
 RE_CONFIG_BACKUP = re.compile(r'.*(\d{4}-\d{2}-\d{2})-(\d+)\.db$')

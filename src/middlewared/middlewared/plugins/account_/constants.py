@@ -12,6 +12,7 @@ SKEL_PATH = '/etc/skel/'  # TODO evaluate whether this is still needed
 # And so this default has been deprecated in favor of using /var/empty
 # which is an empty and immutable directory.
 DEFAULT_HOME_PATH = '/var/empty'
+TRUENAS_ADMIN_USERNAME = 'harboros_admin'
 TRUENAS_PAM_SERVICE = '/etc/pam.d/truenas'
 TRUENAS_PAM_API_KEY_SERVICE = '/etc/pam.d/truenas-api-key'
 NO_LOGIN_SHELL = '/usr/sbin/nologin'

@@ -17,7 +17,7 @@ from middlewared.api.base import (
     single_argument_args,
     single_argument_result
 )
-from middlewared.plugins.account_.constants import DEFAULT_HOME_PATH
+from middlewared.plugins.account_.constants import DEFAULT_HOME_PATH, TRUENAS_ADMIN_USERNAME
 
 __all__ = ["UserEntry",
            "UserCreateArgs", "UserCreateResult",
@@ -327,7 +327,7 @@ class UserSetupLocalAdministratorOptions(BaseModel):
 
 
 class UserSetupLocalAdministratorArgs(BaseModel):
-    username: Literal['root', 'truenas_admin']
+    username: Literal['root', TRUENAS_ADMIN_USERNAME]
     """Administrator username to configure."""
     password: Secret[str]
     """Password for the administrator account."""

@@ -5,6 +5,7 @@ from middlewared.alert.base import Alert, AlertCategory, AlertClass, AlertClassC
 from middlewared.alert.schedule import CrontabSchedule
 from middlewared.utils import ProductType
 from middlewared.utils.audit import UNAUTHENTICATED
+from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 from time import time
 
 
@@ -24,7 +25,7 @@ class AdminSessionAlert(AlertClass):
             "To improve security, create one or more administrator accounts (see "
             f"<a href=\"{URL}\" target=\"_blank\">documentation</a>) "
             "with unique usernames and passwords and disable password access for default "
-            "administrator accounts (<b>root</b>, <b>admin</b>, or <b>truenas_admin</b>)."
+            f"administrator accounts (<b>root</b>, <b>admin</b>, or <b>\"{TRUENAS_ADMIN_USERNAME}\"</b>)."
         ),
     )
 
@@ -73,7 +74,7 @@ class AdminSessionAlertSource(AlertSource):
         qf = [
             ['message_timestamp', '>', now - 86400],
             ['event', '=', 'AUTHENTICATION'],
-            ['username', 'in', ['root', 'admin', 'truenas_admin']],
+            ['username', 'in', ['root', 'admin', TRUENAS_ADMIN_USERNAME]],
             ['success', '=', True]
         ]
 

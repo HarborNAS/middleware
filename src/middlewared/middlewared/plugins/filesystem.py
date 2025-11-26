@@ -31,7 +31,7 @@ from middlewared.api.current import (
 )
 from middlewared.event import EventSource
 from middlewared.utils.pwenc import PWENC_FILE_SECRET
-from middlewared.plugins.account_.constants import SYNTHETIC_CONTAINER_ROOT
+from middlewared.plugins.account_.constants import SYNTHETIC_CONTAINER_ROOT, TRUENAS_ADMIN_USERNAME
 from middlewared.plugins.docker.state_utils import IX_APPS_DIR_NAME
 from middlewared.service import private, CallError, filterable_api_method, Service, job
 from middlewared.utils.filter_list import filter_list
@@ -248,7 +248,7 @@ class FilesystemService(Service):
             raise CallError(f'{path}: path already exists.', errno.EEXIST)
 
         realpath = os.path.realpath(path)
-        if not realpath.startswith(('/mnt/', '/root/.ssh', '/home/admin/.ssh', '/home/truenas_admin/.ssh')):
+        if not realpath.startswith(('/mnt/', '/root/.ssh', '/home/admin/.ssh', f'/home/{TRUENAS_ADMIN_USERNAME}/.ssh')):
             raise CallError(f'{path}: path not permitted', errno.EPERM)
 
         os.mkdir(path, mode=mode)

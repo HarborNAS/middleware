@@ -2,6 +2,7 @@
     from middlewared.utils.filter_list import filter_list
     from middlewared.utils.auth import LEGACY_API_KEY_USERNAME
     from middlewared.utils.pam import STANDALONE_ACCOUNT, FAILLOCK_AUTH_FAIL, FAILLOCK_AUTH_SUCC
+    from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 
     ds_auth = render_ctx['datastore.config']['stg_ds_auth']
     truenas_admin_string = ''
@@ -10,7 +11,7 @@
     ], {'select': ['username']})
 
     if legacy_users:
-        truenas_admin_string = f'truenas_admin={legacy_users[0]["username"]}'
+        truenas_admin_string = f'{TRUENAS_ADMIN_USERNAME}={legacy_users[0]["username"]}'
 %>\
 # Pam configuration for API key authentication
 

@@ -36,6 +36,7 @@ from middlewared.utils.filesystem.acl import (
 from middlewared.utils.filesystem.directory import directory_is_empty
 from middlewared.utils.mount import iter_mountinfo, statmount
 from middlewared.utils.path import FSLocation, path_location
+from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 from .utils import (
     AclTool, AclToolAction, ATAclOptions, ATChownOptions, ATPermOptions,
     calculate_inherited_acl,
@@ -119,7 +120,7 @@ class FilesystemService(Service):
             return loc
 
         if any(st['realpath'].startswith(prefix)
-               for prefix in ('/home/admin/.ssh', '/home/truenas_admin/.ssh', '/root/.ssh')):
+               for prefix in ('/home/admin/.ssh', f'/home/{TRUENAS_ADMIN_USERNAME}/.ssh', '/root/.ssh')):
             return loc
 
         if not st['realpath'].startswith('/mnt/'):

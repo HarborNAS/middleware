@@ -59,6 +59,7 @@ from middlewared.plugins.update_.utils import DOWNLOAD_UPDATE_FILE
 from middlewared.plugins.update_.utils_linux import mount_update
 from middlewared.utils.contextlib import asyncnullcontext
 from middlewared.utils.pwenc import PWENC_FILE_SECRET
+from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 
 
 ENCRYPTION_CACHE_LOCK = asyncio.Lock()
@@ -405,7 +406,7 @@ class FailoverService(ConfigService):
         self.send_small_file('/data/license')
         self.send_pwenc_secret()
         self.send_small_file('/home/admin/.ssh/authorized_keys')
-        self.send_small_file('/home/truenas_admin/.ssh/authorized_keys')
+        self.send_small_file(f'/home/{TRUENAS_ADMIN_USERNAME}/.ssh/authorized_keys')
         self.send_small_file('/root/.ssh/authorized_keys')
         self.send_small_file(ZPOOL_CACHE_FILE, ZPOOL_CACHE_FILE_OVERWRITE)
         self.middleware.call_sync('failover.call_remote', 'failover.zpool.cachefile.setup', ['SYNC'])

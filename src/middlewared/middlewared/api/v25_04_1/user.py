@@ -35,6 +35,7 @@ __all__ = ["UserEntry",
 
 
 DEFAULT_HOME_PATH = "/var/empty"
+from middlewared.plugins.account_.constants import TRUENAS_ADMIN_USERNAME
 
 
 class UserEntry(BaseModel):
@@ -250,7 +251,7 @@ class UserSetupLocalAdministratorOptions(BaseModel):
 
 
 class UserSetupLocalAdministratorArgs(BaseModel):
-    username: Literal['root', 'truenas_admin']
+    username: Literal['root', TRUENAS_ADMIN_USERNAME]
     password: Secret[str]
     options: UserSetupLocalAdministratorOptions = Field(default=UserSetupLocalAdministratorOptions())
 
