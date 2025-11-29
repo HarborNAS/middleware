@@ -103,7 +103,7 @@ class SystemService(Service):
 
         version_split = parsed_version.split('.')
         major_version = '.'.join(version_split[0:2])
-        base_url = f'https://harboros.ai/docs/scale/{major_version}/gettingstarted/scalereleasenotes'
+        base_url = f'https://harboros.ai/docs/scale/{major_version}/gettingstarted/versionnotes'
         if len(version_split) == 2:
             return base_url
         else:
