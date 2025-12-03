@@ -3,7 +3,7 @@
 	motd = middleware.call_sync('system.advanced.config')['motd']
 %>\
 
-    HarborOS (c) 2025-${buildtime.year}, Harborinno Ltd. dba HarborOS
+	HarborOS (c) 2025-${buildtime.year}, Harborinno Ltd. dba HarborOS
 	All rights reserved.
 
 	This software is a modified version of TrueNAS, originally
