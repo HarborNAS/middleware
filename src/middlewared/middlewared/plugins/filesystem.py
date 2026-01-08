@@ -27,6 +27,9 @@ from middlewared.api.current import (
     FilesystemGetZfsAttributesArgs, FilesystemGetZfsAttributesResult,
     FilesystemGetArgs, FilesystemGetResult,
     FilesystemPutArgs, FilesystemPutResult,
+    FilesystemRenameArgs, FilesystemRenameResult,
+    FilesystemCopyArgs, FilesystemCopyResult,
+    FilesystemDeleteArgs, FilesystemDeleteResult,
     FileFollowTailEventSourceArgs, FileFollowTailEventSourceEvent,
 )
 from middlewared.event import EventSource
@@ -619,3 +622,153 @@ class FilesystemService(Service):
         for k in ['total_blocks', 'free_blocks', 'avail_blocks', 'total_bytes', 'free_bytes', 'avail_bytes']:
             result[f'{k}_str'] = str(result[k])
         return result
+
+    @api_method(
+        FilesystemRenameArgs, FilesystemRenameResult,
+        roles=['FILESYSTEM_DATA_WRITE'],
+        audit='Filesystem rename',
+        audit_extended=lambda data: f"{data['src']} -> {data['dst']}"
+    )
+    def rename(self, data):
+        """
+        Rename or move a file or directory from `src` to `dst`.
+
+        This is equivalent to the POSIX rename() system call.
+        If the destination exists and is a file, it will be replaced.
+        If the destination exists and is a directory, an error will be raised.
+        """
+        src = pathlib.Path(data['src'])
+        dst = pathlib.Path(data['dst'])
+
+        if not src.is_absolute():
+            raise CallError(f'{data["src"]}: source path must be absolute', errno.EINVAL)
+
+        if not dst.is_absolute():
+            raise CallError(f'{data["dst"]}: destination path must be absolute', errno.EINVAL)
+
+        if not src.exists():
+            raise CallError(f'{data["src"]}: source path does not exist', errno.ENOENT)
+
+        # Validate paths are within allowed areas
+        src_realpath = os.path.realpath(data['src'])
+        dst_realpath = os.path.realpath(os.path.dirname(data['dst']))
+        for path in [src_realpath, dst_realpath]:
+            if not path.startswith('/mnt/'):
+                raise CallError(f'{path}: path not permitted', errno.EPERM)
+
+        try:
+            os.rename(data['src'], data['dst'])
+        except OSError as e:
+            raise CallError(f'Failed to rename {data["src"]} to {data["dst"]}: {e.strerror}', e.errno)
+
+        return True
+
+    @api_method(
+        FilesystemCopyArgs, FilesystemCopyResult,
+        roles=['FILESYSTEM_DATA_WRITE'],
+        audit='Filesystem copy',
+        audit_extended=lambda data: f"{data['src']} -> {data['dst']}"
+    )
+    @job(lock=lambda args: f'filesystem_copy_{args[0]["src"]}')
+    def copy(self, job, data):
+        """
+        Copy a file or directory from `src` to `dst`.
+
+        If `src` is a directory and `options.recursive` is True (default),
+        the entire directory tree will be copied.
+
+        If `options.preserve_attrs` is True, file attributes (mode, timestamps)
+        will be preserved.
+        """
+        src = pathlib.Path(data['src'])
+        dst = pathlib.Path(data['dst'])
+        options = data.get('options', {})
+
+        if not src.is_absolute():
+            raise CallError(f'{data["src"]}: source path must be absolute', errno.EINVAL)
+
+        if not dst.is_absolute():
+            raise CallError(f'{data["dst"]}: destination path must be absolute', errno.EINVAL)
+
+        if not src.exists():
+            raise CallError(f'{data["src"]}: source path does not exist', errno.ENOENT)
+
+        # Validate paths are within allowed areas
+        src_realpath = os.path.realpath(data['src'])
+        dst_parent = os.path.dirname(data['dst'])
+        if dst_parent:
+            dst_realpath = os.path.realpath(dst_parent)
+        else:
+            dst_realpath = os.path.realpath(data['dst'])
+
+        for path in [src_realpath, dst_realpath]:
+            if not path.startswith('/mnt/'):
+                raise CallError(f'{path}: path not permitted', errno.EPERM)
+
+        try:
+            if src.is_dir():
+                if not options.get('recursive', True):
+                    raise CallError(f'{data["src"]} is a directory. Use recursive option to copy directories.')
+
+                if options.get('preserve_attrs', False):
+                    shutil.copytree(data['src'], data['dst'], copy_function=shutil.copy2)
+                else:
+                    shutil.copytree(data['src'], data['dst'])
+            else:
+                if options.get('preserve_attrs', False):
+                    shutil.copy2(data['src'], data['dst'])
+                else:
+                    shutil.copy(data['src'], data['dst'])
+        except OSError as e:
+            raise CallError(f'Failed to copy {data["src"]} to {data["dst"]}: {e.strerror}', e.errno)
+        except shutil.Error as e:
+            raise CallError(f'Failed to copy {data["src"]} to {data["dst"]}: {str(e)}')
+
+        return True
+
+    @api_method(
+        FilesystemDeleteArgs, FilesystemDeleteResult,
+        roles=['FILESYSTEM_DATA_WRITE'],
+        audit='Filesystem delete',
+        audit_extended=lambda data: data['path']
+    )
+    def delete(self, data):
+        """
+        Delete a file or directory at the specified path.
+
+        If the path is a directory and `options.recursive` is True,
+        the entire directory tree will be deleted.
+
+        If the path is a directory and `options.recursive` is False (default),
+        an error will be raised if the directory is not empty.
+        """
+        path = pathlib.Path(data['path'])
+        options = data.get('options', {})
+
+        if not path.is_absolute():
+            raise CallError(f'{data["path"]}: path must be absolute', errno.EINVAL)
+
+        if not path.exists():
+            raise CallError(f'{data["path"]}: path does not exist', errno.ENOENT)
+
+        # Validate path is within allowed areas
+        realpath = os.path.realpath(data['path'])
+        if not realpath.startswith('/mnt/'):
+            raise CallError(f'{data["path"]}: path not permitted', errno.EPERM)
+
+        # Prevent deleting mount points
+        if path.is_mount():
+            raise CallError(f'{data["path"]}: cannot delete a mount point', errno.EPERM)
+
+        try:
+            if path.is_dir():
+                if options.get('recursive', False):
+                    shutil.rmtree(data['path'])
+                else:
+                    os.rmdir(data['path'])
+            else:
+                os.unlink(data['path'])
+        except OSError as e:
+            raise CallError(f'Failed to delete {data["path"]}: {e.strerror}', e.errno)
+
+        return True

@@ -28,6 +28,9 @@ __all__ = [
     'FilesystemGetZfsAttributesArgs', 'FilesystemGetZfsAttributesResult',
     'FilesystemGetArgs', 'FilesystemGetResult',
     'FilesystemPutArgs', 'FilesystemPutResult',
+    'FilesystemRenameArgs', 'FilesystemRenameResult',
+    'FilesystemCopyArgs', 'FilesystemCopyResult',
+    'FilesystemDeleteArgs', 'FilesystemDeleteResult',
     'FileFollowTailEventSourceArgs', 'FileFollowTailEventSourceEvent',
 ]
 
@@ -436,3 +439,59 @@ class FileFollowTailEventSourceArgs(BaseModel):
 class FileFollowTailEventSourceEvent(BaseModel):
     data: str
     """New data appended to the file being followed."""
+
+
+# Rename/Move API schemas
+@single_argument_args('filesystem_rename')
+class FilesystemRenameArgs(BaseModel):
+    src: NonEmptyString
+    """Source path to rename/move."""
+    dst: NonEmptyString
+    """Destination path."""
+
+
+class FilesystemRenameResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the rename operation is successful."""
+
+
+# Copy API schemas
+class FilesystemCopyOptions(BaseModel):
+    recursive: bool = True
+    """Copy directories recursively."""
+    preserve_attrs: bool = False
+    """Preserve file attributes (mode, timestamps, etc.)."""
+
+
+@single_argument_args('filesystem_copy')
+class FilesystemCopyArgs(BaseModel):
+    src: NonEmptyString
+    """Source path to copy."""
+    dst: NonEmptyString
+    """Destination path."""
+    options: FilesystemCopyOptions = Field(default=FilesystemCopyOptions())
+    """Options controlling copy behavior."""
+
+
+class FilesystemCopyResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the copy operation is successful."""
+
+
+# Delete API schemas
+class FilesystemDeleteOptions(BaseModel):
+    recursive: bool = False
+    """Delete directories recursively."""
+
+
+@single_argument_args('filesystem_delete')
+class FilesystemDeleteArgs(BaseModel):
+    path: NonEmptyString
+    """Path to delete."""
+    options: FilesystemDeleteOptions = Field(default=FilesystemDeleteOptions())
+    """Options controlling delete behavior."""
+
+
+class FilesystemDeleteResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the delete operation is successful."""
