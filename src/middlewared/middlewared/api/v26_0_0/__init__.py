@@ -115,6 +115,7 @@ from .truenas import *
 from .tunable import *
 from .update import *
 from .ups import *
+from .usb_drive import *
 from .user import *
 from .vm import *
 from .vm_device import *
