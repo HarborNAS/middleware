@@ -171,6 +171,8 @@ class FilesystemDirEntry(BaseModel):
     """ Allocated size of file. Calculated by multiplying stx_blocks by 512. """
     mode: int
     """ Entry's mode including file type information and file permission bits. This corresponds with stx_mode. """
+    mtime: float
+    """ Time of last modification. Corresponds with stx_mtime. This is mutable from userspace. """
     mount_id: int
     """ The mount ID of the mount containing the entry. This corresponds to the number in first \
     field of /proc/self/mountinfo and stx_mnt_id. """
