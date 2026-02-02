@@ -26,6 +26,7 @@ from middlewared.api.current import (
     FilesystemSetZfsAttributesArgs, FilesystemSetZfsAttributesResult,
     FilesystemGetZfsAttributesArgs, FilesystemGetZfsAttributesResult,
     FilesystemGetArgs, FilesystemGetResult,
+    FilesystemGetArchiveArgs, FilesystemGetArchiveResult,
     FilesystemPutArgs, FilesystemPutResult,
     FilesystemRenameArgs, FilesystemRenameResult,
     FilesystemCopyArgs, FilesystemCopyResult,
@@ -534,6 +535,69 @@ class FilesystemService(Service):
 
         with safe_open(path, 'rb') as f:
             shutil.copyfileobj(f, job.pipes.output.w)
+
+    @api_method(
+        FilesystemGetArchiveArgs, FilesystemGetArchiveResult,
+        audit='Filesystem get archive',
+        roles=['FILESYSTEM_DATA_READ']
+    )
+    @job(pipes=["output"])
+    def get_archive(self, job, data):
+        """
+        Job to get contents of multiple files/directories as a ZIP archive.
+
+        `paths` is a list of absolute paths to include in the archive.
+        Files are added with their basename; directories are added recursively.
+        """
+        import zipfile
+
+        paths = data['paths']
+
+        if not paths:
+            raise CallError('At least one path is required', errno.EINVAL)
+
+        # Validate all paths exist and are within allowed areas
+        for path in paths:
+            p = pathlib.Path(path)
+            if not p.is_absolute():
+                raise CallError(f'{path}: path must be absolute', errno.EINVAL)
+            if not p.exists():
+                raise CallError(f'{path}: path does not exist', errno.ENOENT)
+            realpath = os.path.realpath(path)
+            if not realpath.startswith('/mnt/'):
+                raise CallError(f'{path}: path not permitted', errno.EPERM)
+
+        # Create ZIP archive and write to output pipe
+        with zipfile.ZipFile(job.pipes.output.w, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Track used names to handle duplicates
+            used_names = {}
+
+            for path in paths:
+                p = pathlib.Path(path)
+                base_name = p.name
+
+                # Handle duplicate names by adding suffix
+                if base_name in used_names:
+                    used_names[base_name] += 1
+                    name_parts = base_name.rsplit('.', 1)
+                    if len(name_parts) == 2:
+                        archive_name = f"{name_parts[0]}_{used_names[base_name]}.{name_parts[1]}"
+                    else:
+                        archive_name = f"{base_name}_{used_names[base_name]}"
+                else:
+                    used_names[base_name] = 0
+                    archive_name = base_name
+
+                if p.is_file():
+                    zf.write(path, archive_name)
+                elif p.is_dir():
+                    # Add directory recursively
+                    for root, dirs, files in os.walk(path):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            # Create relative path within archive
+                            rel_path = os.path.relpath(file_path, p.parent)
+                            zf.write(file_path, rel_path)
 
     @api_method(FilesystemPutArgs, FilesystemPutResult, audit='Filesystem put', roles=['FULL_ADMIN'])
     @job(pipes=["input"])

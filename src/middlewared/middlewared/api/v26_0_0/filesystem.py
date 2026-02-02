@@ -27,6 +27,7 @@ __all__ = [
     'FilesystemSetZfsAttributesArgs', 'FilesystemSetZfsAttributesResult',
     'FilesystemGetZfsAttributesArgs', 'FilesystemGetZfsAttributesResult',
     'FilesystemGetArgs', 'FilesystemGetResult',
+    'FilesystemGetArchiveArgs', 'FilesystemGetArchiveResult',
     'FilesystemPutArgs', 'FilesystemPutResult',
     'FilesystemRenameArgs', 'FilesystemRenameResult',
     'FilesystemCopyArgs', 'FilesystemCopyResult',
@@ -497,3 +498,15 @@ class FilesystemDeleteArgs(BaseModel):
 class FilesystemDeleteResult(BaseModel):
     result: Literal[True]
     """Returns `true` when the delete operation is successful."""
+
+
+# Get Archive API schemas
+@single_argument_args('filesystem_get_archive')
+class FilesystemGetArchiveArgs(BaseModel):
+    paths: list[NonEmptyString]
+    """List of absolute paths to include in the archive."""
+
+
+class FilesystemGetArchiveResult(BaseModel):
+    result: None
+    """Returns `null` when the archive is successfully created."""
