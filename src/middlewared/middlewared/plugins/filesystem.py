@@ -282,6 +282,7 @@ class FilesystemService(Service):
             'size': stat.stx_size,
             'allocation_size': stat.stx_blocks * 512,
             'mode': stat.stx_mode,
+            'mtime': stat.stx_mtime,
             'acl': acl_is_present(os.listxattr(path)),
             'uid': stat.stx_uid,
             'gid': stat.stx_gid,
