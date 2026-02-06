@@ -31,6 +31,7 @@ __all__ = [
     'FilesystemPutArgs', 'FilesystemPutResult',
     'FilesystemRenameArgs', 'FilesystemRenameResult',
     'FilesystemCopyArgs', 'FilesystemCopyResult',
+    'FilesystemMoveArgs', 'FilesystemMoveResult',
     'FilesystemDeleteArgs', 'FilesystemDeleteResult',
     'FileFollowTailEventSourceArgs', 'FileFollowTailEventSourceEvent',
 ]
@@ -479,6 +480,28 @@ class FilesystemCopyArgs(BaseModel):
 class FilesystemCopyResult(BaseModel):
     result: Literal[True]
     """Returns `true` when the copy operation is successful."""
+
+
+# Move API schemas
+class FilesystemMoveOptions(BaseModel):
+    """Options for the filesystem move operation."""
+    recursive: bool = True
+    """Move directories recursively."""
+
+
+@single_argument_args('filesystem_move')
+class FilesystemMoveArgs(BaseModel):
+    src: list[NonEmptyString]
+    """List of source paths to move."""
+    dst: NonEmptyString
+    """Destination directory path."""
+    options: FilesystemMoveOptions = Field(default=FilesystemMoveOptions())
+    """Options controlling move behavior."""
+
+
+class FilesystemMoveResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the move operation is successful."""
 
 
 # Delete API schemas

@@ -30,6 +30,7 @@ from middlewared.api.current import (
     FilesystemPutArgs, FilesystemPutResult,
     FilesystemRenameArgs, FilesystemRenameResult,
     FilesystemCopyArgs, FilesystemCopyResult,
+    FilesystemMoveArgs, FilesystemMoveResult,
     FilesystemDeleteArgs, FilesystemDeleteResult,
     FileFollowTailEventSourceArgs, FileFollowTailEventSourceEvent,
 )
@@ -788,6 +789,110 @@ class FilesystemService(Service):
             raise CallError(f'Failed to copy {data["src"]} to {data["dst"]}: {e.strerror}', e.errno)
         except shutil.Error as e:
             raise CallError(f'Failed to copy {data["src"]} to {data["dst"]}: {str(e)}')
+
+        return True
+
+    @api_method(
+        FilesystemMoveArgs, FilesystemMoveResult,
+        roles=['FILESYSTEM_DATA_WRITE'],
+        audit='Filesystem move',
+        audit_extended=lambda data: f"{data['src']} -> {data['dst']}"
+    )
+    @job(lock=lambda args: f'filesystem_move_{args[0]["dst"]}')
+    def move(self, job, data):
+        """
+        Move files or directories to a destination directory.
+
+        `src` is a list of source paths to move.
+        `dst` is the destination directory path.
+
+        This method automatically handles both same-filesystem moves (using rename)
+        and cross-filesystem moves (using copy + delete).
+
+        For cross-filesystem moves, file attributes and timestamps are preserved.
+        """
+        sources = data['src']
+        dst_dir = pathlib.Path(data['dst'])
+        options = data.get('options', {})
+
+        if not sources:
+            raise CallError('At least one source path is required', errno.EINVAL)
+
+        if not dst_dir.is_absolute():
+            raise CallError(f'{data["dst"]}: destination path must be absolute', errno.EINVAL)
+
+        if not dst_dir.exists():
+            raise CallError(f'{data["dst"]}: destination directory does not exist', errno.ENOENT)
+
+        if not dst_dir.is_dir():
+            raise CallError(f'{data["dst"]}: destination must be a directory', errno.ENOTDIR)
+
+        # Validate destination is within allowed areas
+        dst_realpath = os.path.realpath(data['dst'])
+        if not dst_realpath.startswith('/mnt/'):
+            raise CallError(f'{data["dst"]}: path not permitted', errno.EPERM)
+
+        # Get destination mount_id for comparison
+        try:
+            dst_stat = stat_x.statx_entry_impl(dst_dir)
+            dst_mount_id = dst_stat['st'].stx_mnt_id
+        except Exception as e:
+            raise CallError(f'Failed to stat destination: {e}', errno.EIO)
+
+        total = len(sources)
+        moved = 0
+
+        for src_path in sources:
+            src = pathlib.Path(src_path)
+
+            if not src.is_absolute():
+                raise CallError(f'{src_path}: source path must be absolute', errno.EINVAL)
+
+            if not src.exists():
+                raise CallError(f'{src_path}: source path does not exist', errno.ENOENT)
+
+            # Validate source is within allowed areas
+            src_realpath = os.path.realpath(src_path)
+            if not src_realpath.startswith('/mnt/'):
+                raise CallError(f'{src_path}: path not permitted', errno.EPERM)
+
+            # Prevent moving mount points
+            if src.is_mount():
+                raise CallError(f'{src_path}: cannot move a mount point', errno.EPERM)
+
+            # Determine destination file path
+            dest_path = dst_dir / src.name
+
+            # Check if source and destination are on the same filesystem
+            try:
+                src_stat = stat_x.statx_entry_impl(src)
+                src_mount_id = src_stat['st'].stx_mnt_id
+            except Exception as e:
+                raise CallError(f'Failed to stat source: {e}', errno.EIO)
+
+            same_fs = (src_mount_id == dst_mount_id)
+
+            try:
+                if same_fs:
+                    # Same filesystem - use rename (fast, atomic)
+                    os.rename(src_path, str(dest_path))
+                else:
+                    # Cross filesystem - copy then delete
+                    if src.is_dir():
+                        if not options.get('recursive', True):
+                            raise CallError(f'{src_path} is a directory. Use recursive option.')
+                        shutil.copytree(src_path, str(dest_path), copy_function=shutil.copy2)
+                        shutil.rmtree(src_path)
+                    else:
+                        shutil.copy2(src_path, str(dest_path))
+                        os.unlink(src_path)
+            except OSError as e:
+                raise CallError(f'Failed to move {src_path} to {dest_path}: {e.strerror}', e.errno)
+            except shutil.Error as e:
+                raise CallError(f'Failed to move {src_path} to {dest_path}: {str(e)}')
+
+            moved += 1
+            job.set_progress(int((moved / total) * 100), f'Moved {moved}/{total} items')
 
         return True
 
