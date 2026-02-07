@@ -420,22 +420,55 @@ class UsbDriveService(Service):
         try:
             mntinfo = await self.middleware.run_in_thread(getmntinfo)
         except Exception:
-            return
+            mntinfo = {}
 
+        # Also check /mnt/.usb for any leftover mount directories that might be stale
+        mountpoints_to_cleanup = set()
+
+        # Find mounts by device name
         for mnt in mntinfo.values():
             src = mnt.get('mount_source', '')
             if src.startswith(f'/dev/{dev_name}'):
                 mountpoint = mnt.get('mountpoint')
                 if mountpoint and mountpoint.startswith(USB_MOUNT_BASE):
-                    try:
-                        await self.middleware.run_in_thread(
-                            lambda mp=mountpoint: subprocess.run(
-                                ['umount', '-f', mp], capture_output=True
-                            )
-                        )
-                        os.rmdir(mountpoint)
-                    except Exception:
-                        pass
+                    mountpoints_to_cleanup.add(mountpoint)
+
+        # Unmount each mount point with force and lazy flags
+        # Use both -f (force) and -l (lazy) to handle stuck mounts
+        for mountpoint in mountpoints_to_cleanup:
+            try:
+                # First try lazy unmount which always succeeds even if device is gone
+                await self.middleware.run_in_thread(
+                    lambda mp=mountpoint: subprocess.run(
+                        ['umount', '-l', '-f', mp], capture_output=True
+                    )
+                )
+            except Exception:
+                pass
+
+        # Wait a moment for unmounts to complete
+        await self.middleware.run_in_thread(lambda: __import__('time').sleep(0.2))
+
+        # Clean up mount point directories
+        for mountpoint in mountpoints_to_cleanup:
+            try:
+                # Check if it's still mounted (shouldn't be after lazy unmount)
+                mntinfo_after = await self.middleware.run_in_thread(getmntinfo)
+                still_mounted = any(
+                    m.get('mountpoint') == mountpoint for m in mntinfo_after.values()
+                )
+                if not still_mounted:
+                    # Try to remove the directory
+                    import shutil
+                    if os.path.isdir(mountpoint):
+                        # If directory is empty, use rmdir, otherwise use rmtree
+                        try:
+                            os.rmdir(mountpoint)
+                        except OSError:
+                            # Directory might not be empty due to stale files
+                            shutil.rmtree(mountpoint, ignore_errors=True)
+            except Exception:
+                pass
 
 
 async def udev_usb_storage_hook(middleware, data):
