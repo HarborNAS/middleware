@@ -7,8 +7,6 @@ import pyudev
 from middlewared.api import api_method, Event
 from middlewared.api.current import (
     UsbDriveEntry,
-    UsbDriveQueryArgs,
-    UsbDriveQueryResult,
     UsbDriveMountArgs,
     UsbDriveMountResult,
     UsbDriveUnmountArgs,
@@ -471,6 +469,25 @@ class UsbDriveService(Service):
                 pass
 
 
+async def mount_existing_usb_drives(middleware):
+    """
+    Scan for existing USB drives and mount them.
+    This is called on startup to handle drives present at boot.
+    """
+    # Wait for system to settle
+    await middleware.run_in_thread(lambda: __import__('time').sleep(5.0))
+
+    try:
+        drives = await middleware.call('usb.drive._get_usb_drives')
+        for dev_name in drives:
+            try:
+                await middleware.call('usb.drive.auto_mount', dev_name)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 async def udev_usb_storage_hook(middleware, data):
     """Handle USB storage device events from udev."""
     if data.get('SUBSYSTEM') != 'block':
@@ -537,3 +554,6 @@ def setup(middleware):
 
     # Register udev hook for USB storage events
     middleware.register_hook('udev.block', udev_usb_storage_hook)
+
+    # Auto-mount existing USB drives
+    middleware.create_task(mount_existing_usb_drives(middleware))

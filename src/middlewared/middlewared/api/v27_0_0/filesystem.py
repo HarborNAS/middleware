@@ -27,7 +27,12 @@ __all__ = [
     'FilesystemSetZfsAttributesArgs', 'FilesystemSetZfsAttributesResult',
     'FilesystemGetZfsAttributesArgs', 'FilesystemGetZfsAttributesResult',
     'FilesystemGetArgs', 'FilesystemGetResult',
+    'FilesystemGetArchiveArgs', 'FilesystemGetArchiveResult',
     'FilesystemPutArgs', 'FilesystemPutResult',
+    'FilesystemRenameArgs', 'FilesystemRenameResult',
+    'FilesystemCopyArgs', 'FilesystemCopyResult',
+    'FilesystemMoveArgs', 'FilesystemMoveResult',
+    'FilesystemDeleteArgs', 'FilesystemDeleteResult',
     'FileFollowTailEventSourceArgs', 'FileFollowTailEventSourceEvent',
 ]
 
@@ -168,6 +173,8 @@ class FilesystemDirEntry(BaseModel):
     """ Allocated size of file. Calculated by multiplying stx_blocks by 512. """
     mode: int
     """ Entry's mode including file type information and file permission bits. This corresponds with stx_mode. """
+    mtime: float
+    """ Time of last modification. Corresponds with stx_mtime. This is mutable from userspace. """
     mount_id: int
     """ The mount ID of the mount containing the entry. This corresponds to the number in first \
     field of /proc/self/mountinfo and stx_mnt_id. """
@@ -436,3 +443,93 @@ class FileFollowTailEventSourceArgs(BaseModel):
 class FileFollowTailEventSourceEvent(BaseModel):
     data: str
     """New data appended to the file being followed."""
+
+
+# Rename/Move API schemas
+@single_argument_args('filesystem_rename')
+class FilesystemRenameArgs(BaseModel):
+    src: NonEmptyString
+    """Source path to rename/move."""
+    dst: NonEmptyString
+    """Destination path."""
+
+
+class FilesystemRenameResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the rename operation is successful."""
+
+
+# Copy API schemas
+class FilesystemCopyOptions(BaseModel):
+    recursive: bool = True
+    """Copy directories recursively."""
+    preserve_attrs: bool = False
+    """Preserve file attributes (mode, timestamps, etc.)."""
+
+
+@single_argument_args('filesystem_copy')
+class FilesystemCopyArgs(BaseModel):
+    src: NonEmptyString
+    """Source path to copy."""
+    dst: NonEmptyString
+    """Destination path."""
+    options: FilesystemCopyOptions = Field(default=FilesystemCopyOptions())
+    """Options controlling copy behavior."""
+
+
+class FilesystemCopyResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the copy operation is successful."""
+
+
+# Move API schemas
+class FilesystemMoveOptions(BaseModel):
+    """Options for the filesystem move operation."""
+    recursive: bool = True
+    """Move directories recursively."""
+
+
+@single_argument_args('filesystem_move')
+class FilesystemMoveArgs(BaseModel):
+    src: list[NonEmptyString]
+    """List of source paths to move."""
+    dst: NonEmptyString
+    """Destination directory path."""
+    options: FilesystemMoveOptions = Field(default=FilesystemMoveOptions())
+    """Options controlling move behavior."""
+
+
+class FilesystemMoveResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the move operation is successful."""
+
+
+# Delete API schemas
+class FilesystemDeleteOptions(BaseModel):
+    recursive: bool = False
+    """Delete directories recursively."""
+
+
+@single_argument_args('filesystem_delete')
+class FilesystemDeleteArgs(BaseModel):
+    path: NonEmptyString
+    """Path to delete."""
+    options: FilesystemDeleteOptions = Field(default=FilesystemDeleteOptions())
+    """Options controlling delete behavior."""
+
+
+class FilesystemDeleteResult(BaseModel):
+    result: Literal[True]
+    """Returns `true` when the delete operation is successful."""
+
+
+# Get Archive API schemas
+@single_argument_args('filesystem_get_archive')
+class FilesystemGetArchiveArgs(BaseModel):
+    paths: list[NonEmptyString]
+    """List of absolute paths to include in the archive."""
+
+
+class FilesystemGetArchiveResult(BaseModel):
+    result: None
+    """Returns `null` when the archive is successfully created."""
