@@ -491,6 +491,15 @@ ${spaces}gzip off;
 % endif
         }
 
+        location /featured-photos-api/ {
+            proxy_pass http://127.0.0.1:8686;
+            proxy_http_version 1.1;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+        }
+
         location /rwd/ {
             proxy_pass http://127.0.0.1:1700/;
             proxy_http_version 1.1;
