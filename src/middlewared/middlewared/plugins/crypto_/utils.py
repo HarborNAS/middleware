@@ -1,9 +1,10 @@
+from middlewared.utils.vendor import VENDOR_LOWERCASE
 from truenas_crypto_utils.key import export_private_key
 
 
 # Cert locations
 CERT_ROOT_PATH = '/etc/certificates'
-DEFAULT_CERT_NAME = 'truenas_default'
+DEFAULT_CERT_NAME = f'{VENDOR_LOWERCASE}_default'
 
 # Defining cert constants being used
 CERT_TYPE_EXISTING = 0x08
