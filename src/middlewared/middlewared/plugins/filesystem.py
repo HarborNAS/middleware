@@ -43,7 +43,7 @@ from middlewared.utils.filter_list import filter_list
 from middlewared.utils.filesystem import attrs, stat_x
 from middlewared.utils.filesystem.acl import acl_is_present, ACL_UNDEFINED_ID
 from middlewared.utils.filesystem.constants import FileType
-from middlewared.utils.filesystem.directory import DirectoryIterator, DirectoryRequestMask
+from middlewared.utils.filesystem.directory import ALL_ATTRS, DirectoryIterator, DirectoryRequestMask
 from middlewared.utils.io import safe_open
 from middlewared.utils.mount import iter_mountinfo, statmount
 from middlewared.utils.nss import pwd, grp
@@ -354,6 +354,15 @@ class FilesystemService(Service):
                 self.get_zfs_attributes(str(path))
             except CallError:
                 raise
+            except OSError as e:
+                # Non-ZFS filesystems (e.g. USB-mounted FAT/ext) fail the
+                # ZFS ioctl with ENOTTY or EINVAL. Drop ZFS_ATTRS from the
+                # request so the directory can still be listed.
+                if e.errno not in (errno.ENOTTY, errno.EINVAL):
+                    raise CallError(f'{path}: ZFS attributes are not supported.')
+                if request_mask is None:
+                    request_mask = ALL_ATTRS
+                request_mask &= ~DirectoryRequestMask.ZFS_ATTRS
             except Exception:
                 raise CallError(f'{path}: ZFS attributes are not supported.')
 
