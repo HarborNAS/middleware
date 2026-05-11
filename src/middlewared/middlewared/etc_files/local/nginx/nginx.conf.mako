@@ -499,6 +499,26 @@ ${spaces}gzip off;
             proxy_set_header Host $host;
             proxy_set_header X-Forwarded-For $remote_addr;
         }
+        
+        location /api/harbor-beacon {
+            ## harboros-beacon service 
+            proxy_pass http://127.0.0.1:4174;
+            proxy_http_version 1.1;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+        }
+        
+        location /api/harbor-gate {
+            ## harboros-gate service 
+            proxy_pass http://127.0.0.1:8787;
+            proxy_http_version 1.1;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+        }
 
         location /rwd/ {
             proxy_pass http://127.0.0.1:1700/;
