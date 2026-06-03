@@ -306,13 +306,20 @@ class DirectoryIterator(Generic[T_DirEntry]):
                 realpath = None
 
             if self.__request_mask & int(DirectoryRequestMask.XATTRS):
-                xattrs = os.listxattr(fd)
+                try:
+                    xattrs = os.listxattr(fd)
+                except OSError:
+                    xattrs = []
             else:
                 xattrs = None
 
             if self.__request_mask & int(DirectoryRequestMask.ACL):
                 # try to avoid listing xattrs twice
-                acl = acl_is_present(os.listxattr(fd) if xattrs is None else xattrs)
+                try:
+                    acl_xattrs = os.listxattr(fd) if xattrs is None else xattrs
+                    acl = acl_is_present(acl_xattrs)
+                except OSError:
+                    acl = False
             else:
                 acl = None
 

@@ -136,7 +136,10 @@ class UsbDriveService(Service):
                         'fstype': part_mnt.get('fs_type') if part_mnt else part_props.get('ID_FS_TYPE'),
                         'label': part_props.get('ID_FS_LABEL'),
                         'mountpoint': part_mnt.get('mountpoint') if part_mnt else None,
+                        'readonly': 'ro' in (part_mnt.get('mount_opts') or []) if part_mnt else False,
                     })
+
+            readonly = 'ro' in (mnt.get('mount_opts') or []) if mnt else False
 
             drives[dev_name] = {
                 'id': dev_name,
@@ -148,6 +151,7 @@ class UsbDriveService(Service):
                 'mountpoint': mountpoint,
                 'fstype': fstype,
                 'label': props.get('ID_FS_LABEL'),
+                'readonly': readonly,
                 'bus': bus,
                 'dev': dev_num,
                 'partitions': partitions,
@@ -234,7 +238,14 @@ class UsbDriveService(Service):
         elif fstype == 'ntfs':
             # Use ntfs-3g for better NTFS support
             fstype = 'ntfs-3g'
-            mount_opts.extend(['uid=0', 'gid=0', 'umask=0022'])
+            mount_opts.extend(['uid=0', 'gid=0', 'umask=0022', 'force'])
+            # Attempt to clear NTFS dirty flag/journal before mounting
+            try:
+                await self.middleware.run_in_thread(
+                    lambda: subprocess.run(['ntfsfix', '-d', dev_path], capture_output=True)
+                )
+            except Exception as e:
+                self.logger.warning(f'Failed to run ntfsfix on {dev_path}: {e}')
         elif fstype in ('ext2', 'ext3', 'ext4', 'xfs'):
             pass  # Default options are fine
         elif fstype == 'exfat':

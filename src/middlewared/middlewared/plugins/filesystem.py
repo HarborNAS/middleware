@@ -275,6 +275,11 @@ class FilesystemService(Service):
                     path, options['mode'], exc_info=True
                 )
 
+        try:
+            acl = acl_is_present(os.listxattr(path))
+        except OSError:
+            acl = False
+
         return {
             'name': p.parts[-1],
             'path': path,
@@ -284,7 +289,7 @@ class FilesystemService(Service):
             'allocation_size': stat.stx_blocks * 512,
             'mode': stat.stx_mode,
             'mtime': stat.stx_mtime,
-            'acl': acl_is_present(os.listxattr(path)),
+            'acl': acl,
             'uid': stat.stx_uid,
             'gid': stat.stx_gid,
             'is_mountpoint': False,
@@ -496,7 +501,10 @@ class FilesystemService(Service):
         except KeyError:
             stat['group'] = None
 
-        stat['acl'] = acl_is_present(os.listxattr(path))
+        try:
+            stat['acl'] = acl_is_present(os.listxattr(path))
+        except OSError:
+            stat['acl'] = False
 
         return stat
 

@@ -38,6 +38,8 @@ class UsbDriveEntry(BaseModel):
     """Filesystem type (e.g., 'vfat', 'ntfs', 'ext4')."""
     label: str | None
     """Filesystem label if available."""
+    readonly: bool | None = False
+    """Whether the drive or partition is mounted read-only."""
     bus: int | None
     """USB bus number."""
     dev: int | None
