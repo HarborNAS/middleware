@@ -93,7 +93,7 @@ class ContainerDeviceService(GenericCRUDService[ContainerDeviceEntry]):
         ContainerDeviceGpuChoicesArgs, ContainerDeviceGpuChoicesResult,
         roles=['CONTAINER_DEVICE_READ'], check_annotations=True,
     )
-    async def gpu_choices(self) -> dict[str, str]:
+    async def gpu_choices(self) -> dict[str, str | dict]:
         """Available choices for GPU devices."""
         return await gpu_choices(self.context)
 

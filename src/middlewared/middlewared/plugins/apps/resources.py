@@ -14,7 +14,7 @@ from middlewared.plugins.zfs_.utils import paths_to_datasets_impl
 from middlewared.service import private, Service
 
 from .ix_apps.utils import ContainerState
-from .resources_utils import get_normalized_gpu_choices
+from .resources_utils import get_normalized_gpu_choices, gpu_host_state
 from .utils import IX_APPS_MOUNT_PATH
 
 
@@ -110,6 +110,8 @@ class AppService(Service):
             gpu['pci_slot']: {
                 k: gpu[k] for k in (
                     'vendor', 'description', 'vendor_specific_config', 'pci_slot', 'error', 'gpu_details',
+                    'readiness', 'capabilities', 'failure_reason', 'recommended_actions',
+                    'device_nodes', 'container_runtime', 'os_profile',
                 )
             }
             for gpu in await self.gpu_choices_internal()
@@ -121,6 +123,7 @@ class AppService(Service):
         return get_normalized_gpu_choices(
             await self.middleware.call('device.get_gpus'),
             await self.middleware.run_in_thread(get_nvidia_gpus),
+            await self.middleware.run_in_thread(gpu_host_state),
         )
 
     @private
