@@ -408,6 +408,20 @@ class GPU(BaseModel):
     """Detailed information about the GPU hardware and capabilities."""
     pci_slot: NonEmptyString | None
     """PCI slot identifier where the GPU is installed. `null` if not available."""
+    readiness: dict = Field(default_factory=dict)
+    """Readiness details for host driver, device nodes, runtime, and container passthrough."""
+    capabilities: list[str] = Field(default_factory=list)
+    """High-level capabilities this GPU can provide to Apps or containers."""
+    failure_reason: NonEmptyString | None = None
+    """Machine-readable reason why this GPU cannot currently be assigned."""
+    recommended_actions: list[str] = Field(default_factory=list)
+    """Safe next actions to make this GPU usable."""
+    device_nodes: dict = Field(default_factory=dict)
+    """Host device node availability relevant to this GPU."""
+    container_runtime: dict = Field(default_factory=dict)
+    """Container runtime readiness relevant to this GPU."""
+    os_profile: dict | None = None
+    """Optional OS-level remediation profile for matched hardware diagnostics."""
 
 
 class AppGPUResponse(RootModel[dict[str, GPU]]):

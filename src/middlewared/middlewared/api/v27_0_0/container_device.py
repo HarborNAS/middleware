@@ -204,5 +204,5 @@ class ContainerDeviceGpuChoicesArgs(BaseModel):
 
 
 class ContainerDeviceGpuChoicesResult(BaseModel):
-    result: dict[str, str]
-    """Available GPU(s) for container attachment."""
+    result: dict[str, str | dict]
+    """Available GPU(s) for container attachment. Blocked GPUs may include structured readiness details."""
