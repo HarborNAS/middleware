@@ -509,6 +509,41 @@ ${spaces}gzip off;
             proxy_set_header Host $host;
             proxy_set_header X-Forwarded-For $remote_addr;
         }
+
+        location /api/harbor-link/media/ {
+            ## HarborLink MediaMTX WHEP signaling; data plane UDP/8189 is firewall-managed.
+            proxy_pass http://127.0.0.1:8889/;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_request_buffering off;
+            proxy_read_timeout 10m;
+            proxy_send_timeout 10m;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header Host $host;
+            proxy_set_header Origin $scheme://$http_host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_redirect http://127.0.0.1:8889/ /api/harbor-link/media/;
+            proxy_redirect ~^/(.*)$ /api/harbor-link/media/$1;
+        }
+
+        location /api/harbor-link/hls/ {
+            ## HarborLink MediaMTX LL-HLS/time-shift fallback. Internal HLS port stays loopback-only.
+            proxy_pass http://127.0.0.1:8888/;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_request_buffering off;
+            proxy_read_timeout 10m;
+            proxy_send_timeout 10m;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header Host $host;
+            proxy_set_header Origin $scheme://$http_host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_redirect http://127.0.0.1:8888/ /api/harbor-link/hls/;
+        }
         
         location /api/harbor-gate {
             ## harboros-gate service 
