@@ -14,7 +14,7 @@ from middlewared.api.current import (
 )
 from middlewared.plugins.pool_.utils import UpdateImplArgs
 from middlewared.plugins.zfs_.validation_utils import validate_pool_name
-from middlewared.service import CallError, CRUDService, job, private, ValidationErrors
+from middlewared.service import CallError, CRUDService, job, private, ValidationError, ValidationErrors
 from middlewared.utils import BOOT_POOL_NAME_VALID
 from middlewared.utils.sed import SEDStatus
 from middlewared.utils.size import format_size
@@ -210,13 +210,24 @@ class PoolService(CRUDService):
 
     @private
     def pool_extend(self, pool, context):
-        if context['extra'].get('is_upgraded'):
-            pool['is_upgraded'] = self.middleware.call_sync('pool.is_upgraded', pool['id'])
-
         # WebUI expects the same data as in `boot.get_state`
         pool |= self.middleware.call_sync(
             'pool.pool_normalize_info', pool['name'], context['sed_cache'], pool['all_sed'],
         )
+        if context['extra'].get('is_upgraded'):
+            pool['is_upgraded'] = False
+            if pool['status'] != 'OFFLINE':
+                try:
+                    pool['is_upgraded'] = self.middleware.call_sync('pool.is_upgraded', pool['id'])
+                except ValidationError as e:
+                    if e.errno != errno.ENOENT:
+                        raise
+                    # The pool may have been exported after normalization.
+                    pool |= self.middleware.call_sync(
+                        'pool.pool_normalize_info', pool['name'], context['sed_cache'], pool['all_sed'],
+                    )
+                    if pool['status'] != 'OFFLINE':
+                        raise
         return pool
 
     async def __convert_topology_to_vdevs(self, topology):
