@@ -158,8 +158,8 @@ class AssistantNginxRealGateTests(unittest.TestCase):
             listener.bind(('127.0.0.1', 0))
             cls.port = listener.getsockname()[1]
         text = render()
-        locations = re.findall(r'        location (?:= /api/harbor-(?:beacon|gate)|\^~ /api/harbor-(?:beacon|gate)/) \{.*?\n        \}', text, re.S)
-        if len(locations) != 4:
+        locations = re.findall(r'        location (?:= /api/(?:harbor-(?:beacon|gate)|beacon)|\^~ /api/(?:harbor-(?:beacon|gate)|beacon)/) \{.*?\n        \}', text, re.S)
+        if len(locations) != 6:
             raise AssertionError('Production Assistant proxy locations were not rendered')
         rate = re.search(r'limit_req_zone \$binary_remote_addr zone=harbor_assistant[^;]+;', text).group(0)
         configuration = ('daemon off;\nmaster_process off;\npid ' + str(cls.root / 'nginx.pid') + ';\n'
@@ -219,7 +219,7 @@ class AssistantNginxRealGateTests(unittest.TestCase):
     def test_missing_invalid_and_readonly_tokens_stop_before_beacon(self):
         with self.beacon.lock:
             before = len(self.beacon.requests)
-        for prefix in ('/api/harbor-beacon', '/api/harbor-gate/api/beacon'):
+        for prefix in ('/api/harbor-beacon', '/api/beacon', '/api/harbor-gate/api/beacon'):
             self.assertEqual(self.request(prefix + '/models/endpoints')[0], 401)
             suffix = prefix.replace('/', '-')
             self.assertEqual(self.request(prefix + '/models/endpoints', 'invalid' + suffix)[0], 401)
@@ -228,7 +228,7 @@ class AssistantNginxRealGateTests(unittest.TestCase):
             self.assertEqual(len(self.beacon.requests), before)
 
     def test_full_admin_model_selection_replaces_spoofed_identity_and_service_auth(self):
-        status, value = self.request('/api/harbor-beacon/models/capabilities/retrieval_answer/selection?workspace_id=attacker',
+        status, value = self.request('/api/beacon/models/capabilities/retrieval_answer/selection?workspace_id=attacker',
             'admin-model', 'POST', {'model_id': 'opaque-model'})
         self.assertEqual(status, 200)
         self.assertEqual(value['path'], '/api/models/capabilities/retrieval_answer/selection')

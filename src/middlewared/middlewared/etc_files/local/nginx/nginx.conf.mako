@@ -502,7 +502,7 @@ ${spaces}gzip off;
             proxy_set_header X-Forwarded-For $remote_addr;
         }
         
-        # Compatibility URL now goes through the same verified Gate API as the
+        # Compatibility and Nexus URLs use the same verified Gate API as the
         # explicit /api/harbor-gate/api/beacon path. Beacon stays private on loopback.
         location = /api/harbor-beacon {
             proxy_pass http://127.0.0.1:8787/api/beacon;
@@ -529,6 +529,54 @@ ${spaces}gzip off;
             proxy_send_timeout 200s;
         }
         location ^~ /api/harbor-beacon/ {
+            proxy_pass http://127.0.0.1:8787/api/beacon/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # Gate validates this one-time NAS token; user-supplied trusted identities are stripped.
+            proxy_set_header X-HarborOS-Auth-Token $http_x_harboros_auth_token;
+            proxy_set_header Authorization "";
+            proxy_set_header X-Harbor-Principal-Id "";
+            proxy_set_header X-Harbor-Principal-Source "";
+            proxy_set_header X-Harbor-Principal-Roles "";
+            proxy_set_header X-Harbor-Camera-Scope "";
+            proxy_set_header X-Harbor-Workspace-Id "";
+            proxy_set_header X-Harbor-User-Id "";
+            proxy_set_header X-Harbor-Edge-Assertion "";
+            limit_req zone=harbor_assistant burst=40 nodelay;
+            limit_req_status 429;
+            client_max_body_size 32m;
+            proxy_read_timeout 200s;
+            proxy_send_timeout 200s;
+        }
+        location = /api/beacon {
+            proxy_pass http://127.0.0.1:8787/api/beacon;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-Remote-Addr $remote_addr;
+            proxy_set_header X-Real-Remote-Port $remote_port;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # Gate validates this one-time NAS token; user-supplied trusted identities are stripped.
+            proxy_set_header X-HarborOS-Auth-Token $http_x_harboros_auth_token;
+            proxy_set_header Authorization "";
+            proxy_set_header X-Harbor-Principal-Id "";
+            proxy_set_header X-Harbor-Principal-Source "";
+            proxy_set_header X-Harbor-Principal-Roles "";
+            proxy_set_header X-Harbor-Camera-Scope "";
+            proxy_set_header X-Harbor-Workspace-Id "";
+            proxy_set_header X-Harbor-User-Id "";
+            proxy_set_header X-Harbor-Edge-Assertion "";
+            limit_req zone=harbor_assistant burst=40 nodelay;
+            limit_req_status 429;
+            client_max_body_size 32m;
+            proxy_read_timeout 200s;
+            proxy_send_timeout 200s;
+        }
+        location ^~ /api/beacon/ {
             proxy_pass http://127.0.0.1:8787/api/beacon/;
             proxy_http_version 1.1;
             proxy_set_header Host $http_host;
