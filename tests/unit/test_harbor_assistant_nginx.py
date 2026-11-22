@@ -41,10 +41,10 @@ def render(ssl=False, fips=False):
 
 
 class HarborAssistantNginxTests(unittest.TestCase):
-    def test_both_public_prefixes_use_verified_gate_not_private_beacon(self):
+    def test_all_public_prefixes_use_verified_gate_not_private_beacon(self):
         for ssl,fips in [(False,False),(True,False),(True,True)]:
             text=render(ssl,fips)
-            for location in ('= /api/harbor-beacon','^~ /api/harbor-beacon/','= /api/harbor-gate','^~ /api/harbor-gate/'):
+            for location in ('= /api/harbor-beacon','^~ /api/harbor-beacon/','= /api/beacon','^~ /api/beacon/','= /api/harbor-gate','^~ /api/harbor-gate/'):
                 block=text.split('location '+location+' {',1)[1].split('}',1)[0]
                 self.assertIn('proxy_pass http://127.0.0.1:8787',block)
                 self.assertNotIn('4174',block);self.assertNotIn('4176',block)
@@ -62,6 +62,8 @@ class HarborAssistantNginxTests(unittest.TestCase):
         text=render()
         self.assertIn('location ^~ /api/harbor-beacon/ {\n            proxy_pass http://127.0.0.1:8787/api/beacon/;',text)
         self.assertIn('location = /api/harbor-beacon {\n            proxy_pass http://127.0.0.1:8787/api/beacon;',text)
+        self.assertIn('location ^~ /api/beacon/ {\n            proxy_pass http://127.0.0.1:8787/api/beacon/;',text)
+        self.assertIn('location = /api/beacon {\n            proxy_pass http://127.0.0.1:8787/api/beacon;',text)
         self.assertIn('location /api/v2.0',text)
         self.assertIn('location /websocket',text)
         self.assertIn('location = /ui/sw.js',text)
