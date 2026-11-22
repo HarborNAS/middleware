@@ -17,6 +17,7 @@ __all__ = [
     "SystemAdvancedSyslogCertificateChoicesResult", "SystemAdvancedUpdateArgs", "SystemAdvancedUpdateResult",
     "SystemAdvancedUpdateGpuPciIdsArgs", "SystemAdvancedUpdateGpuPciIdsResult",
     "SystemAdvancedNvidiaPresentArgs", "SystemAdvancedNvidiaPresentResult",
+    "SystemAdvancedNvidiaStatusEntry", "SystemAdvancedNvidiaStatusArgs", "SystemAdvancedNvidiaStatusResult",
 ]
 
 
@@ -94,7 +95,7 @@ class SystemAdvancedEntry(BaseModel):
     kernel_extra_options: str
     """Additional kernel boot parameters to pass to the Linux kernel."""
     nvidia: bool
-    """Whether NVIDIA GPU support is enabled."""
+    """Whether NVIDIA GPU support is requested. Query `system.advanced.nvidia_status` for observed availability."""
 
 
 class SystemAdvancedUpdate(SystemAdvancedEntry, metaclass=ForUpdateMetaclass):
@@ -199,3 +200,24 @@ class SystemAdvancedNvidiaPresentArgs(BaseModel):
 class SystemAdvancedNvidiaPresentResult(BaseModel):
     result: bool
     """Whether a non-isolated NVIDIA GPU is present in the system."""
+
+
+class SystemAdvancedNvidiaStatusEntry(BaseModel):
+    enabled: bool
+    """The requested NVIDIA enablement setting, separate from runtime readiness."""
+    state: Literal['UNKNOWN', 'DISABLED', 'NO_DEVICE', 'READY', 'ERROR']
+    """Observed setup result. READY confirms driver/device checks, not inference qualification."""
+    stage: Literal['not_checked', 'extension', 'module', 'device', 'complete']
+    """Setup stage associated with the last result."""
+    error: str | None
+    """Bounded diagnostic for a failed setup stage, otherwise null."""
+    checked_at: str | None
+    """UTC timestamp of the observation, or null when this boot/setting has not been checked."""
+
+
+class SystemAdvancedNvidiaStatusArgs(BaseModel):
+    pass
+
+
+class SystemAdvancedNvidiaStatusResult(BaseModel):
+    result: SystemAdvancedNvidiaStatusEntry
